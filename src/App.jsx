@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ShieldCheck, Cpu, Truck, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { PRODUCTS } from './data/products';
 import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
 import { InspectModal, SellModal } from './components/Modals';
+import { AuthModal } from './components/AuthModal';
 
 export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -12,8 +13,38 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [inspectedProduct, setInspectedProduct] = useState(null);
   const [activeView, setActiveView] = useState('catalog');
+
+  const [token, setToken] = useState(() => localStorage.getItem('reloot_token') || '');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setUser(data.user))
+      .catch(() => {
+        localStorage.removeItem('reloot_token');
+        setToken('');
+        setUser(null);
+      });
+  }, [token]);
+
+  const handleAuthSuccess = (newToken, newUser) => {
+    localStorage.setItem('reloot_token', newToken);
+    setToken(newToken);
+    setUser(newUser);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('reloot_token');
+    setToken('');
+    setUser(null);
+  };
 
   const filteredProducts = useMemo(() => {
     return PRODUCTS.filter((item) => {
@@ -55,6 +86,9 @@ export default function App() {
         cartCount={cart.length}
         onOpenCart={() => setIsCartOpen(true)}
         onOpenSell={() => setIsSellOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        user={user}
+        onLogout={handleLogout}
         activeView={activeView}
         setActiveView={setActiveView}
       />
@@ -223,11 +257,10 @@ export default function App() {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition-all ${
-                      selectedCategory === cat.id
+                    className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition-all ${selectedCategory === cat.id
                         ? 'bg-reloot-600 text-white shadow-sm'
                         : 'bg-white text-slate-600 border border-slate-200 hover:border-reloot-600'
-                    }`}
+                      }`}
                   >
                     {cat.label}
                   </button>
@@ -278,6 +311,7 @@ export default function App() {
         cart={cart}
         onRemove={handleRemoveFromCart}
         onClearCart={() => setCart([])}
+        token={token}
       />
 
       <InspectModal
@@ -287,7 +321,14 @@ export default function App() {
         isInCart={inspectedProduct ? cart.some((c) => c.id === inspectedProduct.id) : false}
       />
 
-      <SellModal isOpen={isSellOpen} onClose={() => setIsSellOpen(false)} />
+      <SellModal isOpen={isSellOpen} onClose={() => setIsSellOpen(false)} token={token} />
+
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Search, ShoppingCart, PlusCircle } from 'lucide-react';
+import { Zap, Search, ShoppingCart, PlusCircle, User, LogOut } from 'lucide-react';
 
 export default function Navbar({
   searchQuery,
@@ -7,6 +7,9 @@ export default function Navbar({
   cartCount,
   onOpenCart,
   onOpenSell,
+  onOpenAuth,
+  user,
+  onLogout,
   activeView,
   setActiveView
 }) {
@@ -16,10 +19,10 @@ export default function Navbar({
         Garantía RELOOT de 90 días en equipo verificado · Envíos asegurados a todo México
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
         <button
           onClick={() => setActiveView('catalog')}
-          className="flex items-center gap-2.5 text-left group"
+          className="flex items-center gap-2.5 text-left group shrink-0"
         >
           <div className="w-9 h-9 rounded-lg bg-reloot-600 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
             <Zap className="w-5 h-5 fill-current" />
@@ -43,33 +46,56 @@ export default function Navbar({
           />
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveView(activeView === 'verify' ? 'catalog' : 'verify')}
-            className={`hidden sm:inline-flex px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
-              activeView === 'verify'
+            className={`hidden lg:inline-flex px-3 py-2 rounded-xl text-xs font-bold transition-colors ${activeView === 'verify'
                 ? 'bg-reloot-600 text-white'
                 : 'text-slate-600 hover:bg-slate-100'
-            }`}
+              }`}
           >
-            Proceso de Verificación
+            Verificación
           </button>
 
           <button
             onClick={onOpenSell}
-            className="inline-flex items-center gap-1.5 bg-reloot-50 hover:bg-reloot-100 text-reloot-600 border border-blue-200 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all"
+            className="hidden sm:inline-flex items-center gap-1.5 bg-reloot-50 hover:bg-reloot-100 text-reloot-600 border border-blue-200 px-3 py-2 rounded-xl text-xs font-bold transition-all"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Vender equipo</span>
+            <span>Vender</span>
           </button>
+
+          {user ? (
+            <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
+              <User className="w-4 h-4 text-reloot-600" />
+              <span className="text-xs font-bold text-slate-800 max-w-[110px] truncate">
+                {user.name}
+              </span>
+              <button
+                onClick={onLogout}
+                title="Cerrar sesión"
+                className="p-1 rounded-lg text-slate-500 hover:text-red-600 hover:bg-white transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenAuth}
+              className="inline-flex items-center gap-1.5 bg-white hover:border-reloot-600 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 transition-all shadow-sm"
+            >
+              <User className="w-4 h-4 text-reloot-600" />
+              <span>Iniciar sesión</span>
+            </button>
+          )}
 
           <button
             onClick={onOpenCart}
-            className="relative inline-flex items-center gap-2 bg-white hover:border-reloot-600 border border-slate-200 px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-800 transition-all shadow-sm"
+            className="relative inline-flex items-center gap-1.5 bg-reloot-600 hover:bg-reloot-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
           >
-            <ShoppingCart className="w-4 h-4 text-reloot-600" />
+            <ShoppingCart className="w-4 h-4" />
             <span className="hidden sm:inline">Carrito</span>
-            <span className="bg-reloot-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-white text-reloot-600 text-xs font-extrabold px-2 py-0.5 rounded-full">
               {cartCount}
             </span>
           </button>
