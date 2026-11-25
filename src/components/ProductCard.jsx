@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Check, Eye, Activity, ShieldCheck } from 'lucide-react';
 
 export default function ProductCard({ product, onAddToCart, onInspect, isInCart }) {
   const [imgSrc, setImgSrc] = useState(product.image || product.fallbackImage);
 
+  useEffect(() => {
+    setImgSrc(product.image || product.fallbackImage);
+  }, [product.image, product.fallbackImage]);
   const formatPrice = (amount) =>
     new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -130,8 +133,8 @@ export default function ProductCard({ product, onAddToCart, onInspect, isInCart 
             type="button"
             onClick={() => onAddToCart(product)}
             className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors ${isInCart
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                : 'bg-reloot-600 hover:bg-reloot-700 text-white'
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              : 'bg-reloot-600 hover:bg-reloot-700 text-white'
               }`}
           >
             {isInCart ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}

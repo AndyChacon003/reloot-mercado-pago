@@ -11,6 +11,11 @@ export default {
           600: '#2563eb',
           700: '#1d4ed8',
           900: '#0f172a'
+        },
+        mp: {
+          DEFAULT: '#009ee3',
+          dark: '#007eb5',
+          light: '#e6f6fd'
         }
       }
     }

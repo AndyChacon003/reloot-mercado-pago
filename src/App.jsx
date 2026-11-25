@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ShieldCheck, Cpu, Truck, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { ShieldCheck, Cpu, Truck, ArrowRight, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 import { PRODUCTS } from './data/products';
+import { fetchExtraProducts } from './services/productApi';
 import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
@@ -17,6 +18,9 @@ export default function App() {
   const [inspectedProduct, setInspectedProduct] = useState(null);
   const [activeView, setActiveView] = useState('catalog');
   const [verifyBanner, setVerifyBanner] = useState('');
+
+  const [apiProducts, setApiProducts] = useState([]);
+  const [loadingApiProducts, setLoadingApiProducts] = useState(true);
 
   const [quotes, setQuotes] = useState([]);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
@@ -36,6 +40,20 @@ export default function App() {
       localStorage.setItem('reloot_theme', 'light');
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchExtraProducts()
+      .then((extra) => {
+        if (mounted) setApiProducts(extra);
+      })
+      .finally(() => {
+        if (mounted) setLoadingApiProducts(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -107,8 +125,10 @@ export default function App() {
     if (activeView === 'admin') setActiveView('catalog');
   };
 
+  const allProducts = useMemo(() => [...PRODUCTS, ...apiProducts], [apiProducts]);
+
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((item) => {
+    return allProducts.filter((item) => {
       const matchesCat = selectedCategory === 'all' || item.category === selectedCategory;
       const q = searchQuery.toLowerCase();
       const matchesSearch =
@@ -117,7 +137,7 @@ export default function App() {
         item.categoryLabel.toLowerCase().includes(q);
       return matchesCat && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [allProducts, selectedCategory, searchQuery]);
 
   const handleAddToCart = (product) => {
     if (cart.some((item) => item.id === product.id)) {
@@ -133,10 +153,10 @@ export default function App() {
   };
 
   const categories = [
-    { id: 'all', label: 'Todos' },
-    { id: 'pc', label: 'Componentes PC' },
+    { id: 'all', label: `Todos (${allProducts.length})` },
+    { id: 'pc', label: 'Componentes y Laptops' },
     { id: 'consolas', label: 'Consolas' },
-    { id: 'telefonos', label: 'Teléfonos' }
+    { id: 'telefonos', label: 'Teléfonos y Tablets' }
   ];
 
   return (
@@ -429,7 +449,7 @@ export default function App() {
                   Catálogo Disponible
                 </h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Pasa el cursor sobre cada tarjeta para ver su telemetría y diagnóstico técnico.
+                  Equipos locales verificados + inventario en vivo desde API.
                 </p>
               </div>
 
@@ -449,6 +469,13 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            {loadingApiProducts && (
+              <div className="mb-5 inline-flex items-center gap-2 text-xs font-semibold text-reloot-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-3 py-1.5 rounded-full">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Sincronizando más productos desde la API...</span>
+              </div>
+            )}
 
             {filteredProducts.length === 0 ? (
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center text-slate-500 dark:text-slate-400">
