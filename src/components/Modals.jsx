@@ -1,7 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Image as ImageIcon, CheckCircle2, Loader2, ShoppingCart, ShieldCheck } from 'lucide-react';
+import { sendGAEvent } from '../services/analytics';
 
 export function InspectModal({ product, onClose, onAddToCart, isInCart }) {
+  useEffect(() => {
+    if (!product) return;
+    sendGAEvent('view_item', {
+      currency: 'MXN',
+      value: product.price,
+      items: [
+        {
+          item_id: String(product.id),
+          item_name: product.name,
+          item_category: product.categoryLabel,
+          price: product.price,
+          quantity: 1
+        }
+      ]
+    });
+  }, [product?.id]);
+
   if (!product) return null;
 
   const formatPrice = (amount) =>

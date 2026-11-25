@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Check, Eye, Activity, ShieldCheck } from 'lucide-react';
+import { sendGAEvent } from '../services/analytics';
 
 export default function ProductCard({ product, onAddToCart, onInspect, isInCart }) {
   const [imgSrc, setImgSrc] = useState(product.image || product.fallbackImage);
@@ -7,12 +8,29 @@ export default function ProductCard({ product, onAddToCart, onInspect, isInCart 
   useEffect(() => {
     setImgSrc(product.image || product.fallbackImage);
   }, [product.image, product.fallbackImage]);
+
   const formatPrice = (amount) =>
     new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
       maximumFractionDigits: 0
     }).format(amount);
+
+  const handleSelectProduct = () => {
+    sendGAEvent('select_item', {
+      item_list_name: 'Catálogo RELOOT',
+      items: [
+        {
+          item_id: String(product.id),
+          item_name: product.name,
+          item_category: product.categoryLabel,
+          price: product.price,
+          quantity: 1
+        }
+      ]
+    });
+    onInspect(product);
+  };
 
   const renderTelemetry = () => {
     if (!product.telemetry) return null;
@@ -75,7 +93,7 @@ export default function ProductCard({ product, onAddToCart, onInspect, isInCart 
 
             <button
               type="button"
-              onClick={() => onInspect(product)}
+              onClick={handleSelectProduct}
               className="w-full inline-flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-bold py-2 rounded-xl transition-colors"
             >
               <Eye className="w-3.5 h-3.5" />
@@ -122,7 +140,7 @@ export default function ProductCard({ product, onAddToCart, onInspect, isInCart 
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => onInspect(product)}
+            onClick={handleSelectProduct}
             title="Inspeccionar equipo"
             className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-reloot-600 hover:text-reloot-600 dark:hover:text-blue-400 transition-colors"
           >
@@ -133,8 +151,8 @@ export default function ProductCard({ product, onAddToCart, onInspect, isInCart 
             type="button"
             onClick={() => onAddToCart(product)}
             className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors ${isInCart
-              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-              : 'bg-reloot-600 hover:bg-reloot-700 text-white'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'bg-reloot-600 hover:bg-reloot-700 text-white'
               }`}
           >
             {isInCart ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
