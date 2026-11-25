@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sql, ensureTables } from './_db.js';
+import { dispatchVerificationEmail } from './send-verification.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'reloot_secret_key_2026';
 
@@ -31,19 +32,27 @@ export default async function handler(req, res) {
 
             const passwordHash = await bcrypt.hash(String(password), 10);
             const created = await sql`
-        INSERT INTO users (name, email, password_hash)
-        VALUES (${String(name).trim()}, ${normalizedEmail}, ${passwordHash})
-        RETURNING id, name, email, created_at
+        INSERT INTO users (name, email, password_hash, is_verified)
+        VALUES (${String(name).trim()}, ${normalizedEmail}, ${passwordHash}, FALSE)
+        RETURNING id, name, email, is_verified, created_at
       `;
 
             const user = created[0];
-            const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+            const mailResult = await dispatchVerificationEmail(user, req);
 
-            return res.status(201).json({ token, user });
+            return res.status(201).json({
+                requiresVerification: true,
+                email: user.email,
+                mailSent: mailResult.sent,
+                verifyUrl: mailResult.sent ? undefined : mailResult.verifyUrl,
+                message: mailResult.sent
+                    ? 'Cuenta creada. Revisa tu correo y haz clic en el enlace para verificarla.'
+                    : 'Cuenta creada. Configura RESEND_API_KEY en Vercel para enviar correos automáticamente.'
+            });
         }
 
         const found = await sql`
-      SELECT id, name, email, password_hash, created_at
+      SELECT id, name, email, password_hash, is_verified, created_at
       FROM users
       WHERE email = ${normalizedEmail}
     `;
@@ -59,10 +68,19 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        if (dbUser.is_verified === false) {
+            return res.status(403).json({
+                error: 'Debes verificar tu correo electrónico antes de iniciar sesión.',
+                requiresVerification: true,
+                email: dbUser.email
+            });
+        }
+
         const user = {
             id: dbUser.id,
             name: dbUser.name,
             email: dbUser.email,
+            is_verified: dbUser.is_verified,
             created_at: dbUser.created_at
         };
 

@@ -16,9 +16,28 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [inspectedProduct, setInspectedProduct] = useState(null);
   const [activeView, setActiveView] = useState('catalog');
+  const [verifyBanner, setVerifyBanner] = useState('');
 
   const [token, setToken] = useState(() => localStorage.getItem('reloot_token') || '');
   const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verifyToken = params.get('verify_token');
+    if (!verifyToken) return;
+
+    fetch(`/api/verify-email?token=${encodeURIComponent(verifyToken)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setVerifyBanner(
+          data.message || data.error || 'Estado de verificación actualizado.'
+        );
+        window.history.replaceState({}, document.title, window.location.pathname);
+      })
+      .catch(() => {
+        setVerifyBanner('No se pudo validar el enlace de verificación.');
+      });
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -92,6 +111,21 @@ export default function App() {
         activeView={activeView}
         setActiveView={setActiveView}
       />
+
+      {verifyBanner && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 text-xs sm:text-sm text-slate-800">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <span className="font-semibold">{verifyBanner}</span>
+            <button
+              type="button"
+              onClick={() => setVerifyBanner('')}
+              className="text-xs font-bold text-reloot-600 hover:underline shrink-0"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
 
       {activeView === 'verify' ? (
         <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-14">
@@ -331,4 +365,3 @@ export default function App() {
     </div>
   );
 }
-

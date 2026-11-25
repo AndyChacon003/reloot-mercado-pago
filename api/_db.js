@@ -12,9 +12,16 @@ export async function ensureTables() {
       name VARCHAR(120) NOT NULL,
       email VARCHAR(160) UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
+      is_verified BOOLEAN DEFAULT FALSE,
+      verification_token VARCHAR(128),
+      verification_expires TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `;
+
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(128)`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_expires TIMESTAMP`;
 }
 
 export { sql };

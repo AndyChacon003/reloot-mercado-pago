@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User, Loader2 } from 'lucide-react';
+import { X, Lock, Mail, User, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
 
 export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     const [mode, setMode] = useState('login');
@@ -7,14 +7,53 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [resending, setResending] = useState(false);
     const [error, setError] = useState('');
+    const [infoMessage, setInfoMessage] = useState('');
+    const [pendingVerifyEmail, setPendingVerifyEmail] = useState('');
+    const [fallbackVerifyUrl, setFallbackVerifyUrl] = useState('');
 
     if (!isOpen) return null;
+
+    const handleResend = async (targetEmail) => {
+        const emailToUse = (targetEmail || pendingVerifyEmail || email).trim();
+        if (!emailToUse) {
+            setError('Escribe tu correo para reenviar la verificación');
+            return;
+        }
+
+        setResending(true);
+        setError('');
+        setInfoMessage('');
+        setFallbackVerifyUrl('');
+
+        try {
+            const res = await fetch('/api/send-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: emailToUse })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                setError(data.error || 'No se pudo reenviar el correo');
+            } else {
+                setInfoMessage(data.message || 'Correo de verificación enviado.');
+                if (data.verifyUrl) setFallbackVerifyUrl(data.verifyUrl);
+            }
+        } catch {
+            setError('Error de red al reenviar el correo');
+        } finally {
+            setResending(false);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setInfoMessage('');
+        setFallbackVerifyUrl('');
 
         try {
             const res = await fetch('/api/auth', {
@@ -26,6 +65,19 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
 
             if (!res.ok) {
                 setError(data.error || 'No se pudo completar la operación');
+                if (data.requiresVerification) {
+                    setPendingVerifyEmail(data.email || email);
+                }
+                setLoading(false);
+                return;
+            }
+
+            if (data.requiresVerification) {
+                setPendingVerifyEmail(data.email || email);
+                setInfoMessage(data.message || 'Revisa tu correo para verificar tu cuenta.');
+                if (data.verifyUrl) setFallbackVerifyUrl(data.verifyUrl);
+                setName('');
+                setPassword('');
                 setLoading(false);
                 return;
             }
@@ -34,6 +86,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             setName('');
             setEmail('');
             setPassword('');
+            setPendingVerifyEmail('');
             setLoading(false);
             onClose();
         } catch {
@@ -67,6 +120,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                             onClick={() => {
                                 setMode('login');
                                 setError('');
+                                setInfoMessage('');
                             }}
                             className={`py-2 rounded-lg text-xs font-bold transition-all ${mode === 'login' ? 'bg-white text-reloot-600 shadow-xs' : 'text-slate-600'
                                 }`}
@@ -78,6 +132,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                             onClick={() => {
                                 setMode('register');
                                 setError('');
+                                setInfoMessage('');
                             }}
                             className={`py-2 rounded-lg text-xs font-bold transition-all ${mode === 'register' ? 'bg-white text-reloot-600 shadow-xs' : 'text-slate-600'
                                 }`}
@@ -86,9 +141,39 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                         </button>
                     </div>
 
+                    {infoMessage && (
+                        <div className="mb-4 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2">
+                            <div className="flex items-start gap-2">
+                                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                                <span>{infoMessage}</span>
+                            </div>
+                            {fallbackVerifyUrl && (
+                                <div className="pt-1 break-all">
+                                    <a
+                                        href={fallbackVerifyUrl}
+                                        className="underline font-bold text-reloot-600"
+                                    >
+                                        Abrir enlace de verificación directo
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {error && (
-                        <div className="mb-4 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3">
-                            {error}
+                        <div className="mb-4 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 space-y-2">
+                            <div>{error}</div>
+                            {(pendingVerifyEmail || error.toLowerCase().includes('verificar')) && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleResend(pendingVerifyEmail || email)}
+                                    disabled={resending}
+                                    className="inline-flex items-center gap-1.5 text-reloot-600 hover:underline font-bold"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
+                                    <span>{resending ? 'Enviando...' : 'Reenviar correo de verificación'}</span>
+                                </button>
+                            )}
                         </div>
                     )}
 
