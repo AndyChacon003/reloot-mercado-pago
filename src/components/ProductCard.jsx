@@ -1,183 +1,127 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, Activity, Eye, ShoppingBag, ImageOff } from 'lucide-react';
-import { fetchProductImage } from '../services/imageApi';
+import React, { useState } from 'react';
+import { ShoppingCart, Check, Eye, Activity, ShieldCheck } from 'lucide-react';
 
 export default function ProductCard({ product, onAddToCart, onInspect, isInCart }) {
-  const cardRef = useRef(null);
-  const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0, glareX: 50, glareY: 50 });
-  const [isHovered, setIsHovered] = useState(false);
-  const [imgSrc, setImgSrc] = useState(product.fallbackImage);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const [imgSrc, setImgSrc] = useState(product.image || product.fallbackImage);
 
-  useEffect(() => {
-    let active = true;
-    fetchProductImage(product).then((res) => {
-      if (active && res && res.url) {
-        setImgSrc(res.url);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [product]);
-
-  const handleMouseMove = (e) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    const rotateX = ((y - centerY) / centerY) * -7;
-    const rotateY = ((x - centerX) / centerX) * 7;
-    const glareX = (x / rect.width) * 100;
-    const glareY = (y / rect.height) * 100;
-
-    setTilt({ rotateX, rotateY, glareX, glareY });
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-    setTilt({ rotateX: 0, rotateY: 0, glareX: 50, glareY: 50 });
-  };
-
-  const badgeStyle = {
-    a: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    open: 'bg-blue-50 text-reloot-600 border-blue-200',
-    b: 'bg-amber-50 text-amber-700 border-amber-200'
-  }[product.gradeType];
-
-  const discount = Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100);
+  const formatPrice = (amount) =>
+    new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      maximumFractionDigits: 0
+    }).format(amount);
 
   return (
-    <div className="card-perspective">
-      <article
-        ref={cardRef}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          transform: isHovered
-            ? `rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg) translateY(-6px)`
-            : 'rotateX(0deg) rotateY(0deg) translateY(0px)',
-          transition: isHovered ? 'transform 120ms ease-out, box-shadow 200ms ease' : 'transform 350ms ease, box-shadow 350ms ease'
-        }}
-        className="relative bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl hover:border-blue-300 group select-none"
-      >
-        {isHovered && (
-          <div
-            className="pointer-events-none absolute inset-0 z-20 opacity-60 transition-opacity"
-            style={{
-              background: `radial-gradient(circle at ${tilt.glareX}% ${tilt.glareY}%, rgba(0, 87, 255, 0.16), transparent 65%)`
+    <article className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs hover:shadow-xl hover:border-reloot-600/50 dark:hover:border-blue-500/50 transition-all duration-300 flex flex-col justify-between">
+      <div>
+        <div className="relative h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+          <img
+            src={imgSrc}
+            alt={product.name}
+            onError={() => {
+              if (product.fallbackImage && imgSrc !== product.fallbackImage) {
+                setImgSrc(product.fallbackImage);
+              }
             }}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
-        )}
 
-        <div className="relative h-48 bg-slate-100 border-b border-slate-100 overflow-hidden">
-          {!imgLoaded && !imgError && (
-            <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-blue-50 via-blue-100/70 to-blue-50" />
-          )}
-
-          {imgError ? (
-            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-blue-50/60">
-              <ImageOff className="w-7 h-7 mb-1 text-reloot-600" />
-              <span className="text-xs font-bold text-reloot-600">{product.tag}</span>
-            </div>
-          ) : (
-            <img
-              src={imgSrc}
-              alt={product.name}
-              loading="lazy"
-              onLoad={() => setImgLoaded(true)}
-              onError={() => setImgError(true)}
-              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
-                imgLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-            />
-          )}
-
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-slate-950/20 pointer-events-none" />
-
-          <span className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur text-reloot-600 text-[11px] font-extrabold px-2.5 py-1 rounded-lg border border-blue-100 shadow-sm">
-            -{discount}% OFF
-          </span>
-
-          <span className="absolute top-3 right-3 z-10 bg-reloot-600 text-white text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md shadow-sm">
-            {product.tag}
-          </span>
-
-          <span className="absolute bottom-3 left-3 z-10 text-[10px] font-bold uppercase tracking-wider text-white bg-slate-900/75 backdrop-blur-xs px-2 py-0.5 rounded-md">
-            {product.categoryLabel}
-          </span>
-
-          <div
-            className={`absolute inset-x-2 bottom-2 z-10 bg-slate-900/95 backdrop-blur-md text-white rounded-xl p-2.5 transition-all duration-300 flex items-center justify-between text-[11px] ${
-              isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-sky-400" />
-              <span>{product.telemetry.temp}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{product.telemetry.score}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-5 flex-1 flex flex-col">
-          <div className="mb-2">
-            <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-md border ${badgeStyle}`}>
-              {product.condition}
+          <div className="absolute top-3 left-3 flex items-center gap-1.5">
+            {product.discount && (
+              <span className="bg-reloot-600 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-xs">
+                {product.discount}
+              </span>
+            )}
+            <span className="bg-slate-900/80 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
+              {product.categoryLabel}
             </span>
           </div>
 
-          <h3 className="font-bold text-slate-900 text-base leading-snug mb-1.5 group-hover:text-reloot-600 transition-colors">
+          <div className="absolute inset-0 bg-slate-950/90 text-white p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-300 uppercase tracking-wider mb-2">
+                <Activity className="w-3.5 h-3.5" />
+                <span>Telemetría y Diagnóstico</span>
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed mb-2">
+                {product.specs}
+              </p>
+              {product.telemetry && (
+                <p className="text-[11px] text-emerald-300 font-semibold">
+                  {product.telemetry}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onInspect(product)}
+              className="w-full inline-flex items-center justify-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-bold py-2 rounded-xl transition-colors"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Ver ficha técnica</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mb-1.5">
+            <span className="inline-flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              {product.condition || 'Verificado'}
+            </span>
+            {product.stock !== undefined && (
+              <span className="text-slate-400 dark:text-slate-500 font-semibold">
+                Stock: {product.stock}
+              </span>
+            )}
+          </div>
+
+          <h3 className="font-bold text-slate-900 dark:text-white text-base leading-snug line-clamp-1 mb-1">
             {product.name}
           </h3>
 
-          <p className="text-xs text-slate-500 leading-relaxed mb-4 flex-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 min-h-[2rem]">
             {product.specs}
           </p>
-
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-            <div>
-              <span className="block text-[11px] text-slate-400 line-through">
-                ${product.oldPrice.toLocaleString('es-MX')} MXN
-              </span>
-              <span className="text-lg font-extrabold text-reloot-600">
-                ${product.price.toLocaleString('es-MX')} <span className="text-xs font-bold">MXN</span>
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 relative z-20">
-              <button
-                onClick={() => onInspect(product)}
-                title="Ver reporte técnico"
-                className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:border-reloot-600 hover:text-reloot-600 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => onAddToCart(product)}
-                disabled={isInCart}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isInCart
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
-                    : 'bg-reloot-600 hover:bg-reloot-700 text-white shadow-sm active:scale-95'
-                }`}
-              >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span>{isInCart ? 'En carrito' : 'Agregar'}</span>
-              </button>
-            </div>
-          </div>
         </div>
-      </article>
-    </div>
+      </div>
+
+      <div className="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+        <div>
+          {product.oldPrice && (
+            <span className="block text-[11px] text-slate-400 line-through">
+              {formatPrice(product.oldPrice)}
+            </span>
+          )}
+          <span className="text-lg font-extrabold text-slate-900 dark:text-white">
+            {formatPrice(product.price)}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onInspect(product)}
+            title="Inspeccionar equipo"
+            className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-reloot-600 hover:text-reloot-600 dark:hover:text-blue-400 transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onAddToCart(product)}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors ${isInCart
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'bg-reloot-600 hover:bg-reloot-700 text-white'
+              }`}
+          >
+            {isInCart ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
+            <span>{isInCart ? 'En carrito' : 'Agregar'}</span>
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
