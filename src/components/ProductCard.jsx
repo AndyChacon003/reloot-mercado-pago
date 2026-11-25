@@ -11,6 +11,27 @@ export default function ProductCard({ product, onAddToCart, onInspect, isInCart 
       maximumFractionDigits: 0
     }).format(amount);
 
+  const renderTelemetry = () => {
+    if (!product.telemetry) return null;
+    if (typeof product.telemetry === 'string') {
+      return <p className="text-[11px] text-emerald-300 font-semibold">{product.telemetry}</p>;
+    }
+    const { temp, score, warranty } = product.telemetry;
+    const parts = [
+      temp ? `Temp: ${temp}` : null,
+      score ? `Score: ${score}` : null,
+      warranty ? `Garantía: ${warranty}` : null
+    ].filter(Boolean);
+
+    if (parts.length === 0) return null;
+
+    return (
+      <p className="text-[11px] text-emerald-300 font-semibold">
+        {parts.join(' · ')}
+      </p>
+    );
+  };
+
   return (
     <article className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs hover:shadow-xl hover:border-reloot-600/50 dark:hover:border-blue-500/50 transition-all duration-300 flex flex-col justify-between">
       <div>
@@ -46,11 +67,7 @@ export default function ProductCard({ product, onAddToCart, onInspect, isInCart 
               <p className="text-xs text-slate-200 leading-relaxed mb-2">
                 {product.specs}
               </p>
-              {product.telemetry && (
-                <p className="text-[11px] text-emerald-300 font-semibold">
-                  {product.telemetry}
-                </p>
-              )}
+              {renderTelemetry()}
             </div>
 
             <button
