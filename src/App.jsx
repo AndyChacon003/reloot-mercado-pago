@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ShieldCheck, Cpu, Truck, ArrowRight, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
 import { PRODUCTS } from './data/products';
 import { fetchExtraProducts } from './services/productApi';
+import { initGA, sendGAEvent } from './services/analytics';
 import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
@@ -29,6 +30,23 @@ export default function App() {
 
   const [token, setToken] = useState(() => localStorage.getItem('reloot_token') || '');
   const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    initGA();
+  }, []);
+
+  useEffect(() => {
+    const term = searchQuery.trim();
+    if (term.length < 2) return;
+
+    const timer = setTimeout(() => {
+      sendGAEvent('search', {
+        search_term: term
+      });
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     const root = document.documentElement;

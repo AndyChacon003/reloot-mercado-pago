@@ -10,6 +10,7 @@ import {
   Store,
   Lock
 } from 'lucide-react';
+import { sendGAEvent } from '../services/analytics';
 
 export default function CartDrawer({ isOpen, onClose, cart, onRemove, onClearCart }) {
   const [step, setStep] = useState('cart'); // 'cart' | 'mp-form' | 'processing' | 'approved'
@@ -26,6 +27,17 @@ export default function CartDrawer({ isOpen, onClose, cart, onRemove, onClearCar
   const total = cart.reduce((acc, item) => acc + item.price, 0);
 
   const handleOpenMpSimulator = () => {
+    sendGAEvent('begin_checkout', {
+      currency: 'MXN',
+      value: total,
+      items: cart.map((item) => ({
+        item_id: String(item.id),
+        item_name: item.name,
+        item_category: item.categoryLabel || 'Hardware',
+        price: item.price,
+        quantity: 1
+      }))
+    });
     setStep('mp-form');
   };
 
