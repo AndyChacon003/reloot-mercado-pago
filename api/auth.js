@@ -32,9 +32,9 @@ export default async function handler(req, res) {
 
             const passwordHash = await bcrypt.hash(String(password), 10);
             const created = await sql`
-        INSERT INTO users (name, email, password_hash, is_verified)
-        VALUES (${String(name).trim()}, ${normalizedEmail}, ${passwordHash}, FALSE)
-        RETURNING id, name, email, is_verified, created_at
+        INSERT INTO users (name, email, password_hash, role, is_verified)
+        VALUES (${String(name).trim()}, ${normalizedEmail}, ${passwordHash}, 'user', FALSE)
+        RETURNING id, name, email, role, is_verified, created_at
       `;
 
             const user = created[0];
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
         }
 
         const found = await sql`
-      SELECT id, name, email, password_hash, is_verified, created_at
+      SELECT id, name, email, password_hash, role, is_verified, created_at
       FROM users
       WHERE email = ${normalizedEmail}
     `;
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
-        if (dbUser.is_verified === false) {
+        if (dbUser.is_verified === false && dbUser.role !== 'admin') {
             return res.status(403).json({
                 error: 'Debes verificar tu correo electrónico antes de iniciar sesión.',
                 requiresVerification: true,
@@ -80,11 +80,16 @@ export default async function handler(req, res) {
             id: dbUser.id,
             name: dbUser.name,
             email: dbUser.email,
+            role: dbUser.role || 'user',
             is_verified: dbUser.is_verified,
             created_at: dbUser.created_at
         };
 
-        const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign(
+            { userId: user.id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
 
         return res.status(200).json({ token, user });
     } catch {

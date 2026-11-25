@@ -19,7 +19,9 @@ export default async function handler(req, res) {
 
         const decoded = jwt.verify(token, JWT_SECRET);
         const rows = await sql`
-      SELECT id, name, email, created_at FROM users WHERE id = ${decoded.userId}
+      SELECT id, name, email, role, is_verified, created_at
+      FROM users
+      WHERE id = ${decoded.userId}
     `;
 
         if (rows.length === 0) {
